@@ -1,0 +1,1210 @@
+---
+title: "Análisis exploratorio y preparaciín base de datos variables ambientales en la PA"
+subtitle: "Insumo Modelo de evaluación de stock de dinámica poblacional del Krill (Euphausia superba)"
+author: "Mauricio Mardones"
+date:  "`r format(Sys.time(), '%d %B, %Y')`"
+#bibliography: seaice.bib
+#csl: apa.csl
+link-citations: yes
+linkcolor: blue
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+    theme: cosmo
+    fontsize: 0.9em
+    linestretch: 1.7
+    html-math-method: katex
+    self-contained: true
+    code-tools: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE,
+                      warning = FALSE,
+                      fig.width = 8,
+                      fig.height = 5)
+#XQuartz is a mess, put this in your onload to default to cairo instead
+options(bitmapType = "cairo") 
+# (https://github.com/tidyverse/ggplot2/issues/2655)
+# Lo mapas se hacen mas rapido
+
+```
+
+
+
+```{r library}
+# datos rasterrizados y espaciales
+library(ncdf4)
+library(raster)
+library(sf)
+library(CCAMLRGIS)
+library(tmaptools)
+# manipulacion
+library(readr)
+library(tidyverse)
+library(patchwork)
+library(data.table)
+# analisis estadisticos post
+library(easystats)
+library(see)
+# visualizacion
+library(ggridges) 
+library(ncdf4)
+# optimización
+library(parallel)
+#library(kableExtra)
+library(devtools)
+# datos precargados de hielo marino
+#devtools::install_github("AustralianAntarcticDivision/raadtools")
+library(raadtools)
+#roots
+library(here)
+```
+
+# OBJETIVO
+
+Este documento tiene como objetivo, en primera instancia, entender los datos de diversas variables ambientales que influyen en la dinámica poblacional del krill. En este caso se trabaja la lectura, manipulación y extracción de series temporales en toda la Antártica de las variables de interés, para despues centrar los datos en la zona de estudio, es decir, la Península Antártica. Una vez obtenidas las series temporales, se generan bases de datos que servirán para realizar test de correlación estacio temporal con variabes biologica-pesquera del krill, en este caso, tallas medias y tambien tallas de reclitamiento, todos estos indicadores siendo dependientes de la pesquería.
+
+una vez entendidas estas relaciones, se ultilizaran las conculisiones y datos para incorporar en un modelo de evaluación integrada del krill en la PA:
+
+## Datos de concentracion de hielo
+
+### Datos de varios archivos `.nc`
+
+Contributor_name: Walter N. Meier, Florence Fetterer, Ann Windnagel, J. Scott Stewart, Trey Stafford, Matt Fisher
+
+This project was supported in part by a grant from the NOAA Climate Data Record Program. Production of original NASA Team and Bootstrap algorithm estimates supported by the NASA Polar Distributed Active Archive Center. The sea ice concentration algorithms were developed by Donald J. Cavalieri, Josefino C. Comiso, Claire L. Parkinson, and others at the NASA Goddard Space Flight Center in Greenbelt, MD.
+platform: NIMBUS-7
+Sensor: SMMR > Scanning Multichannel Microwave Radiometer
+
+```{r lectura datos nc, include=FALSE, message=FALSE}
+setwd("~/DOCAS/Data/KrillLows/Data_All")
+ich1978 <- raster("seaice_conc_daily_sh_1978_v04r00.nc", varname = "cdr_seaice_conc")
+ich1979 <- raster("seaice_conc_daily_sh_1979_v04r00.nc", varname = "cdr_seaice_conc")
+ich1980 <- raster("seaice_conc_daily_sh_1980_v04r00.nc", varname = "cdr_seaice_conc")
+ich1981 <- raster("seaice_conc_daily_sh_1981_v04r00.nc", varname = "cdr_seaice_conc")
+ich1982 <- raster("seaice_conc_daily_sh_1982_v04r00.nc", varname = "cdr_seaice_conc")
+ich1983 <- raster("seaice_conc_daily_sh_1983_v04r00.nc", varname = "cdr_seaice_conc")
+ich1984 <- raster("seaice_conc_daily_sh_1984_v04r00.nc", varname = "cdr_seaice_conc")
+ich1985 <- raster("seaice_conc_daily_sh_1985_v04r00.nc", varname = "cdr_seaice_conc")
+ich1986 <- raster("seaice_conc_daily_sh_1986_v04r00.nc", varname = "cdr_seaice_conc")
+ich1987 <- raster("seaice_conc_daily_sh_1987_v04r00.nc", varname = "cdr_seaice_conc")
+ich1988 <- raster("seaice_conc_daily_sh_1988_v04r00.nc", varname = "cdr_seaice_conc")
+ich1989 <- raster("seaice_conc_daily_sh_1989_v04r00.nc", varname = "cdr_seaice_conc")
+ich1990 <- raster("seaice_conc_daily_sh_1990_v04r00.nc", varname = "cdr_seaice_conc")
+ich1991 <- raster("seaice_conc_daily_sh_1991_v04r00.nc", varname = "cdr_seaice_conc")
+ich1992 <- raster("seaice_conc_daily_sh_1992_v04r00.nc", varname = "cdr_seaice_conc")
+ich1993 <- raster("seaice_conc_daily_sh_1993_v04r00.nc", varname = "cdr_seaice_conc")
+ich1994 <- raster("seaice_conc_daily_sh_1994_v04r00.nc", varname = "cdr_seaice_conc")
+ich1995 <- raster("seaice_conc_daily_sh_1995_v04r00.nc", varname = "cdr_seaice_conc")
+ich1996 <- raster("seaice_conc_daily_sh_1996_v04r00.nc", varname = "cdr_seaice_conc")
+ich1997 <- raster("seaice_conc_daily_sh_1997_v04r00.nc", varname = "cdr_seaice_conc")
+ich1998 <- raster("seaice_conc_daily_sh_1998_v04r00.nc", varname = "cdr_seaice_conc")
+ich1999 <- raster("seaice_conc_daily_sh_1999_v04r00.nc", varname = "cdr_seaice_conc")
+ich2000 <- raster("seaice_conc_daily_sh_2000_v04r00.nc", varname = "cdr_seaice_conc")
+ich2001 <- raster("seaice_conc_daily_sh_2001_v04r00.nc", varname = "cdr_seaice_conc")
+ich2002 <- raster("seaice_conc_daily_sh_2002_v04r00.nc", varname = "cdr_seaice_conc")
+ich2003 <- raster("seaice_conc_daily_sh_2003_v04r00.nc", varname = "cdr_seaice_conc")
+ich2004 <- raster("seaice_conc_daily_sh_2004_v04r00.nc", varname = "cdr_seaice_conc")
+ich2005 <- raster("seaice_conc_daily_sh_2005_v04r00.nc", varname = "cdr_seaice_conc")
+ich2006 <- raster("seaice_conc_daily_sh_2006_v04r00.nc", varname = "cdr_seaice_conc")
+ich2007 <- raster("seaice_conc_daily_sh_2007_v04r00.nc", varname = "cdr_seaice_conc")
+ich2008 <- raster("seaice_conc_daily_sh_2008_v04r00.nc", varname = "cdr_seaice_conc")
+ich2009 <- raster("seaice_conc_daily_sh_2009_v04r00.nc", varname = "cdr_seaice_conc")
+ich2010 <- raster("seaice_conc_daily_sh_2010_v04r00.nc", varname = "cdr_seaice_conc")
+ich2011 <- raster("seaice_conc_daily_sh_2011_v04r00.nc", varname = "cdr_seaice_conc")
+ich2012 <- raster("seaice_conc_daily_sh_2012_v04r00.nc", varname = "cdr_seaice_conc")
+ich2013 <- raster("seaice_conc_daily_sh_2013_v04r00.nc", varname = "cdr_seaice_conc")
+ich2014 <- raster("seaice_conc_daily_sh_2014_v04r00.nc", varname = "cdr_seaice_conc")
+ich2015 <- raster("seaice_conc_daily_sh_2015_v04r00.nc", varname = "cdr_seaice_conc")
+ich2016 <- raster("seaice_conc_daily_sh_2016_v04r00.nc", varname = "cdr_seaice_conc")
+ich2017 <- raster("seaice_conc_daily_sh_2017_v04r00.nc", varname = "cdr_seaice_conc")
+ich2018 <- raster("seaice_conc_daily_sh_2018_v04r00.nc", varname = "cdr_seaice_conc")
+ich2019 <- raster("seaice_conc_daily_sh_2019_v04r00.nc", varname = "cdr_seaice_conc")
+ich2020 <- raster("seaice_conc_daily_sh_2020_v04r00.nc", varname = "cdr_seaice_conc")
+ich2021 <- raster("seaice_conc_daily_sh_2021_v04r00.nc", varname = "cdr_seaice_conc")
+
+# los junto 
+ich<-stack(ich1978, ich1979,ich1980,ich1981,ich1982,ich1983,
+           ich1984,ich1985,ich1986,ich1987,ich1989,
+           ich1990,ich1991,ich1992,ich1993,ich1994,
+           ich1995,ich1996,ich1997,ich1998,ich1999,
+          ich2000,ich2001,ich2002,ich2003,ich2004,
+          ich2005,ich2006,ich2007,ich2008,ich2009,
+          ich2010,ich2011,ich2012,ich2013,ich2014,
+          ich2015,ich2016, ich2017,ich2018,ich2019, 
+          ich2020, ich2021)
+
+class(ich)
+```
+Un mapa de que ilustra los cambios en la concentracion de  hielo a través de los años.
+
+```{r plot simplem}
+spplot(ich, 
+       colorkey = list(space = "bottom"), 
+       scales = list(draw = TRUE),
+      main = "Índice Concentracion de Hielo",
+      fill='white', 
+      names.attr=c("1978", "1979","1980", "1981", "1982", 
+                      "1983","1984", "1985", "1986",
+                      "1987","1989", "1990", "1991",
+                      "1992", "1993", "1994",
+                     "1995","1996", "1997", "1998", 
+                       "1999",  "2000",  "2001",  "2002",  "2003", 
+                      "2004", "2005", "2006", "2007", "2008", "2009",
+                      "2010","2011", "2012", "2013", "2014", "2015", 
+                      "2016", "2017" , "2018",  "2019", "2020", "2021"))
+
+
+```
+
+Ahora preparo los datos como data frame.
+
+```{r  prepara}
+extension <- extent(ich)
+proyection <- crs(ich)
+
+# ahora extraigo los valores por cada punto 
+stack_zona_ich <- raster::as.data.frame(ich, xy = TRUE)
+stack_zona_ich <- na.omit(stack_zona_ich)
+```
+Ahora debo manipuñar la data para dejar formato largo table y luego extraer la serie de tiempo.
+
+
+```{r manip1}
+# Primero cambio nombre de las columnas
+colnames(stack_zona_ich) <- c("lon", "lat", "1978",
+                      "1979","1980", "1981", "1982", 
+                      "1983","1984", "1985", "1986",
+                      "1987","1989", "1990", "1991",
+                      "1992", "1993", "1994",
+                     "1995","1996", "1997", "1998", 
+                      "1999",  "2000",  "2001",  "2002",  "2003", 
+                      "2004", "2005", "2006", "2007", "2008", "2009",
+                      "2010","2011", "2012", "2013", "2014", "2015", 
+                      "2016", "2017" , "2018",  "2019", "2020", "2021")
+# ahora pivoteo los datos a lo largo
+datsic <- stack_zona_ich %>%
+  pivot_longer(cols = c("1978", "1979","1980", "1981", "1982", 
+                      "1983","1984", "1985", "1986",
+                      "1987","1989", "1990", "1991",
+                      "1992", "1993", "1994",
+                     "1995","1996", "1997", "1998", 
+                      "1999",  "2000",  "2001",  "2002",  "2003", 
+                      "2004", "2005", "2006", "2007", "2008", "2009",
+                      "2010","2011", "2012", "2013", "2014", "2015", 
+                      "2016", "2017" , "2018",  "2019", "2020", "2021",), 
+               names_to = "ANO", values_to = "SEAICE")
+```
+
+Una vez ordenada los datos como un `data.frame`, puedo obtener los registros agregados como serie de tiempo.
+
+
+Un histograma de para ver la distribución de la variable y otros estadisticos adhoc
+```{r descr plot}
+dsic <- datsic %>% 
+  group_by(ANO) %>% 
+  summarize(measic=mean(SEAICE))
+# trend
+we <- ggplot(dsic, 
+             aes(x = as.double(ANO), 
+                 y = measic)) +
+  geom_line(col="blue")+
+  geom_point()+
+  stat_smooth(method = "loess", col="blue")+
+  theme_bw()+
+  theme( panel.grid.major = element_blank())+
+  xlim(1979, 2021)+
+  ylim(0.60, 0.75)+
+  ylab("Indice Concentración de Hielo")+
+  xlab("")
+# histograma
+weh <- ggplot(dsic, 
+             aes(x= measic)) +
+  geom_histogram(col=2, fill=2, 
+                 bins = 50)+
+  theme_bw()
+weh|we
+
+```
+
+### Datos de solo un archivo `.nc`
+
+
+```{r datos de un archivo}
+setwd("~/DOCAS/Data/KrillLows/Data_All")
+nc <- nc_open("antarctic_omi_si_extent_19930115_P20220328.nc")
+
+# Obtener una lista de las variables en el archivo
+attributes(nc$var)
+attributes(nc$dim)
+
+# Obtener una variable específica
+var <- ncvar_get(nc, "siextents_glor")
+time_var <- ncvar_get(nc, "time")
+# Crear dtaframe
+df <- data.table(var)
+
+
+time_var_r <- as.POSIXct(time_var, origin = "1950-01-01 00:00:00", tz = "UTC")
+df <- data.frame(time_var_r,var)
+data <- df %>% 
+  group_by(time_var_r) %>% 
+  summarize(mean_var=mean(var))
+
+#trend
+we1<- ggplot(data , aes(x = time_var_r, y = mean_var)) +
+  geom_line()+
+  stat_smooth(method = "loess")+
+  theme_bw()
+
+# histograma
+weh1 <- ggplot(data, 
+             aes(x= mean_var)) +
+  geom_histogram(col=4, fill=4, 
+                 bins = 50)+
+  theme_bw()
+weh1|we1
+```
+Sin embargo estos datos solo corresponden a un año de registros, el 2022. Solo leí el archivo para ejemplificar la lectura de este tipo de archivos.
+
+
+### Datos desde archivos `.tif``
+
+
+The Sea Ice Index provides a quick look at Arctic- and Antarctic-wide changes in sea ice. It is a source for consistent, up-to-date sea ice extent and concentration images, in PNG format, and data values, in GeoTIFF and ASCII text files, from November 1978 to the present. Sea Ice Index images also depict trends and anomalies in ice cover calculated using a 30-year reference period of 1981 through 2010. The images and data are produced in a consistent way that makes the Index time-series appropriate for use when looking at long-term trends in sea ice cover. Both monthly and daily products are available. However, monthly products are better to use for long-term trend analysis because errors in the daily product tend to be averaged out in the monthly product and because day-to-day variations are often the result of short-term weather.
+
+- Parameter(s): ICE EXTENT ICE GROWTH/MELT SEA ICE CONCENTRATION
+- Platform(s):
+- DMSP, DMSP 5D-3/F17, DMSP 5D-3/F18, Nimbus-7
+- Sensor(s): SMMR, SSM/I, SSMIS
+- Data Format(s): GeoTIFF
+- Temporal Coverage: 26 October 1978 to present
+- Temporal Resolution: 1 day
+- Spatial Resolution: 25 km 25 km
+
+
+```{r data tif}
+# Crear un vector con la lista de nombres de archivo
+
+file_list <- list.files(path = "~/DOCAS/Data/KrillLows/01_Jan", 
+                        pattern = "*.tif", full.names = TRUE)
+
+# Leer cada archivo en la lista con lappl
+
+raster_lis <- lapply(file_list, raster)
+
+# Unir los archivos en un único objeto "raster stack"
+raster_stack <- stack(raster_lis)
+extension <- extent(raster_stack)
+proyeccion <- crs(raster_stack)
+
+spplot(raster_stack, 
+       colorkey = list(space = "bottom"), 
+       scales = list(draw = TRUE),
+      main = "Concentracion de Hielo",
+      fill='white', 
+      names.attr=c("1979","1980", "1981", "1982", 
+                      "1983","1984", "1985", "1986",
+                      "1987","1989", "1990", "1991",
+                      "1992", "1993", "1994",
+                     "1995","1996", "1997", "1998", 
+                      "1999",  "2000",  "2001",  "2002",  "2003", 
+                      "2004", "2005", "2006", "2007", "2008", "2009",
+                      "2010","2011", "2012", "2013", "2014", "2015", 
+                      "2016", "2017" , "2018",  "2019", "2020", "2021", "2022"))
+
+
+# Seleccionar la primera capa del "raster stack"
+#raster_interes <- raster_stack[[1]]
+```
+
+
+```{r df}
+# ahora extraigo los valores por cada punto 
+stack_zona_df <- raster::as.data.frame(raster_stack, xy = TRUE)
+stack_zona_df <- na.omit(stack_zona_df)
+#str(stack_zona_df)
+
+```
+
+Plot  simples de la variable desde archivos `.tif` de un año ejemplo (2001)
+```{r plot simple}
+
+p2001 <- ggplot() +
+  geom_histogram(data = stack_zona_df, aes(S_201701_concentration_v3.0))+
+  theme_bw()+
+  xlab("")
+
+
+p2001a <- ggplot() +
+  geom_raster(data = stack_zona_df, aes(x = x, y = y, fill = S_200101_concentration_v3.0))+
+  scale_fill_fermenter( palette = "Blues",
+                        name="Sea Ice Concentracion 2001")+
+  theme_bw()+
+  xlab("")
+
+p2001|p2001a
+```
+
+Ahora debo manipuñar la data para dejar formato largo table y luego extraer la serie de tiempo.
+
+
+```{r manip}
+# Primero cambio nombre de las columnas
+colnames(stack_zona_df) <- c("lon", "lat", 
+                      "1979","1980", "1981", "1982", 
+                      "1983","1984", "1985", "1986",
+                      "1987","1989", "1990", "1991",
+                      "1992", "1993", "1994",
+                     "1995","1996", "1997", "1998", 
+                      "1999",  "2000",  "2001",  "2002",  "2003", 
+                      "2004", "2005", "2006", "2007", "2008", "2009",
+                      "2010","2011", "2012", "2013", "2014", "2015", 
+                      "2016", "2017" , "2018",  "2019", "2020", "2021", "2022")
+# ahora pivoteo los datos a lo largo
+datgeo2 <- stack_zona_df %>%
+  pivot_longer(cols = c("1979","1980", "1981", "1982", 
+                      "1983","1984", "1985", "1986",
+                      "1987","1989", "1990", "1991",
+                      "1992", "1993", "1994",
+                     "1995","1996", "1997", "1998", 
+                      "1999",  "2000",  "2001",  "2002",  "2003", 
+                      "2004", "2005", "2006", "2007", "2008", "2009",
+                      "2010","2011", "2012", "2013", "2014", "2015", 
+                      "2016", "2017" , "2018",  "2019", "2020", "2021", "2022"), 
+               names_to = "ANO", values_to = "SEAICE")
+
+# preparo la data para transformar a lat long
+
+dat_utm <- datgeo2[, c("lon", "lat")]
+
+# Crea un objeto de proyección para UTM Zone 30N
+utm30 <- CRS("+proj=utm +zone=30 +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
+
+# Transforma las coordenadas UTM a latitud y longitud
+df_latlong <- spTransform(SpatialPoints(dat_utm, proj4string=utm30), CRS("+proj=longlat +datum=WGS84"))
+
+# Extrae las coordenadas latitud y longitud del objeto transformado
+df_latlong <- as.data.frame(df_latlong@coords)
+
+# Renombra las columnas de las coordenadas
+colnames(df_latlong) <- c("long", "lat")
+
+
+datgeo4 <- cbind(df_latlong, datgeo2[,c(3,4)])
+```
+
+Compruebo la tendencia general de los datos a través de la media de concentracion de hielo en toda la zona
+
+```{r manidatman}
+data=datgeo4 %>% 
+               group_by(ANO) %>% 
+               summarize(mean_var=mean(SEAICE))
+
+# un grafico simple
+as <- ggplot(data,aes(y=mean_var, x=as.double(ANO))) +
+  geom_point()+
+  stat_smooth(method = "loess")+
+  theme_light()
+as
+```
+
+
+## Datos de clorofila
+
+
+1 .Clhorophila (1997-2022) Global Ocean Colour (Copernicus-GlobColour), Bio-Geo-Chemical, L4 (monthly and interpolated) from Satellite Observations 
+Overview
+
+The biogeochemical hindcast for global ocean is produced at Mercator-Ocean (Toulouse. France). It provides 3D biogeochemical fields for the time period 1993-2019 at 1/4 degree and on 75 vertical levels. It uses PISCES biogeochemical model (available on the NEMO modelling platform). No data assimilation in this product.
+
+Latest NEMO version (v3.6_STABLE)
+Forcings: GLORYS2V4-FREE ocean physics produced at Mercator-Ocean and ERA-Interim atmosphere produced at ECMWF at a daily frequency
+Outputs: Daily (chlorophyll. nitrate. phosphate. silicate. dissolved oxygen. primary production) and monthly (chlorophyll. nitrate. phosphate. silicate. dissolved oxygen. primary production. iron. phytoplankton in carbon) 3D mean fields interpolated on a standard regular grid in NetCDF format. The simulation is performed once and for all.
+Initial conditions: World Ocean Atlas 2013 for nitrate. phosphate. silicate and dissolved oxygen. GLODAPv2 for DIC and Alkalinity. and climatological model outputs for Iron and DOC
+Quality/Accuracy/Calibration information: See the related Quality Information Document
+DOI (product): https://doi.org/10.48670/moi-00019
+
+Full name: Global ocean biogeochemistry hindcast
+Product ID : GLOBAL_MULTIYEAR_BGC_001_029
+DOI:10.48670/moi-00019
+Source :Numerical models
+Spatial extent : Global OceanLat -90° to 90°Lon -180° to 180°
+Spatial resolution: 0.25° × 0.25°
+Temporal extent: 1 Jan 1993 to 31 Dec 2020
+Temporal resolution: Daily-Monthly
+Elevation (depth) levels: 75
+Processing level: Level 4
+Variables: 
+Cell thickness Mass concentration of chlorophyll a in sea water (CHL)
+Model level number at sea floorMole concentration of dissolved iron in sea water (FE)
+Mole concentration of dissolved molecular oxygen in sea water (O2)
+Mole concentration of nitrate in sea water (NO3)
+Mole concentration of phosphate in sea water (PO4)
+Mole concentration of phytoplankton expressed as carbon in sea water (PHYC)
+Mole concentration of silicate in sea water (SI)
+Net primary production of biomass expressed as carbon per unit volume in sea water (PP)
+Sea floor depth below geoidSea water ph reported on total scale (pH)
+Surface partial pressure of carbon dioxide in sea water (spCO2)
+Feature type: Grid
+Blue markets: Conservation & biodiversityClimate & adaptationPolicy & governanceScience & innovationMarine food
+Projection: ETRS89 (EPSG 4258)
+Data assimilation: None
+Update frequency: Weekly
+Format: NetCDF-4
+Originating centre: Mercator Océan International
+filename: cmems_mod.nc
+
+Primero inspeccionamos el archivo y sus atributos.
+
+```{r data chl}
+chl <- nc_open(here("Data_TSM_Chla","cmems_mod.nc"))
+# Obtener una lista de las variables en el archivo
+attributes(chl$var)
+attributes(chl$dim)
+```
+En este caso, solo tenemos una variable dasociada al raster llamada `chl`
+
+
+Ahora leo los datos por fecha para manipular mejor el archivo `.nc` con la función `brick()`.
+(A RasterBrick is a multi-layer raster object. They are typically created from a multi-layer (band) file; but they can also exist entirely in memory. They are similar to a RasterStack (that can be created with stack), but processing time should be shorter when using a RasterBrick. Yet they are less flexible as they can only point to a single file.)
+
+
+```{r  data chl2}
+# Abrir el archivo .nc
+setwd("~/DOCAS/Data/KrillLows/Data_All")
+raster_nc <- brick("cmems_mod.nc", varname = "chl")
+# Obtener la variable temporal
+dates <- getZ(raster_nc)
+years <-  as.integer(format(as.Date(dates), "%Y"))
+month <-  as.integer(format(as.Date(dates), "%m"))
+unique(month)
+
+chla <- stackApply(raster_nc, years, fun=mean)
+
+
+extension <- extent(chla)
+proyeccion <- crs(chla)
+
+
+# ahora extraigo los valores por cada punto 
+stack_zona_chl <- raster::as.data.frame(chla, xy = TRUE)
+stack_zona_chl <- na.omit(stack_zona_chl)
+#str(stack_zona_chl)
+```
+
+Saco un plot del comportamiento de la variable en todos los años
+```{r plot chla1}
+spplot(chla, 
+       colorkey = list(space = "bottom"), 
+       scales = list(draw = TRUE),
+      main = "Chorophyla a",
+      fill='white',
+      names.attr=c("2000",  "2001",  "2002",  "2003", 
+                      "2004", "2005", "2006", "2007", "2008", "2009",
+                      "2010","2011", "2012", "2013", "2014", "2015", 
+                      "2016", "2017" , "2018",  "2019", "2020"))
+
+```
+
+Miro la distribución de la variable en el año `2000`
+
+```{r hist chl}
+ggplot() +
+  geom_histogram(data = stack_zona_chl, 
+                 aes(index_2020),
+                 bins= 100)+
+  theme_bw()
+```
+
+Ahora ploteo los datos del `2000`
+```{r chla 2000}
+ggplot() +
+  geom_raster(data = stack_zona_chl, 
+              aes(x = x, y = y, fill = index_2000))+
+  theme_bw()+
+  scale_fill_fermenter(palette = "BrBG")
+```
+Ahora debo manipuñar la data para dejar formato largo table y luego extraer la serie de tiempo.
+
+
+```{r manidat}
+# Primero cambio nombre de las columnas
+colnames(stack_zona_chl) <- c("lon", "lat", 
+                       "2000",  "2001",  "2002",  "2003", 
+                      "2004", "2005", "2006", "2007", "2008", "2009",
+                      "2010","2011", "2012", "2013", "2014", "2015", 
+                      "2016", "2017" , "2018",  "2019", "2020")
+# ahora pivoteo los datos a lo largo
+datchl <- stack_zona_chl %>%
+  pivot_longer(cols = c( "2000",  "2001",  "2002",  "2003", 
+                      "2004", "2005", "2006", "2007", "2008", "2009",
+                      "2010","2011", "2012", "2013", "2014", "2015", 
+                      "2016", "2017" , "2018",  "2019", "2020"), 
+               names_to = "ANO", values_to = "CHLa")
+```
+
+Compruebo la tendencia general de los datos a traves de la media de concentracion de hielo
+
+```{r manidatchl}
+daa=datchl %>% 
+               group_by(ANO) %>% 
+               summarize(mean_var=mean(CHLa))
+
+# un grafico simple
+aschl <- ggplot(daa,aes(y=mean_var, x=as.double(ANO))) +
+  geom_point(color="2")+
+  stat_smooth(method = "lm", col=2)+
+  theme_light()+
+  xlab("")
+aschl
+```
+
+
+## Datos de TSM
+
+ERA5 is the fifth generation ECMWF reanalysis for the global climate and weather for the past 4 to 7 decades. Currently data is available from 1950, with Climate Data Store entries for 1950-1978 (preliminary back extension) and from 1959 onwards (final release plus timely updates, this page). ERA5 replaces the ERA-Interim reanalysis.
+
+Reanalysis combines model data with observations from across the world into a globally complete and consistent dataset using the laws of physics. This principle, called data assimilation, is based on the method used by numerical weather prediction centres, where every so many hours (12 hours at ECMWF) a previous forecast is combined with newly available observations in an optimal way to produce a new best estimate of the state of the atmosphere, called analysis, from which an updated, improved forecast is issued. Reanalysis works in the same way, but at reduced resolution to allow for the provision of a dataset spanning back several decades. Reanalysis does not have the constraint of issuing timely forecasts, so there is more time to collect observations, and when going further back in time, to allow for the ingestion of improved versions of the original observations, which all benefit the quality of the reanalysis product.
+
+ERA5 provides hourly estimates for a large number of atmospheric, ocean-wave and land-surface quantities. An uncertainty estimate is sampled by an underlying 10-member ensemble at three-hourly intervals. Ensemble mean and spread have been pre-computed for convenience. Such uncertainty estimates are closely related to the information content of the available observing system which has evolved considerably over time. They also indicate flow-dependent sensitive areas. To facilitate many climate applications, monthly-mean averages have been pre-calculated too, though monthly means are not available for the ensemble mean and spread.
+
+ERA5 is updated daily with a latency of about 5 days (monthly means are available around the 6th of each month). In case that serious flaws are detected in this early release (called ERA5T), this data could be different from the final release 2 to 3 months later. In case that this occurs users are notified.
+
+The data set presented here is a regridded subset of the full ERA5 data set on native resolution. It is online on spinning disk, which should ensure fast and easy access. It should satisfy the requirements for most common applications.
+
+An overview of all ERA5 datasets can be found in this article. Information on access to ERA5 data on native resolution is provided in these guidelines.
+
+Data has been regridded to a regular lat-lon grid of 0.25 degrees for the reanalysis and 0.5 degrees for the uncertainty estimate (0.5 and 1 degree respectively for ocean waves). There are four main sub sets: hourly and monthly products, both on pressure levels (upper air fields) and single levels (atmospheric, ocean-wave and land surface quantities).
+
+This file have "ERA5 monthly mean data on single levels from 1991 to present".
+
+```{r leo tsm}
+tsm <- nc_open("~/DOCAS/Data/KrillLows/Data_TSM_Chla/tsm_1995_2022_PA.nc")
+
+```
+
+```{r atribu tsm}
+# Obtener una lista de las variables en el archivo
+attributes(tsm$var)
+attributes(tsm$dim)
+```
+Ahora leo los datos por fecha para manipular mejor
+
+```{r leo con brick}
+# Abrir el archivo .nc
+setwd("~/DOCAS/Data/KrillLows/Data_All")
+raster_ts <- brick("tsm_1995_2022_PA.nc", varname = "sst")
+
+# Obtener la variable temporal
+dates <- getZ(raster_ts)
+years <-  as.integer(format(as.Date(dates), "%Y"))
+#month <-  as.integer(format(as.Date(dates), "%m"))
+unique(years)
+#unique(month)
+
+sstm <- stackApply(raster_ts, years,  fun=mean)
+
+extension <- extent(sstm)
+proyeccion <- crs(sstm)
+
+
+# ahora extraigo los valores por cada punto 
+stack_zona_tsm <- raster::as.data.frame(sstm, xy = TRUE)
+stack_zona_tsm <- na.omit(stack_zona_tsm)
+str(stack_zona_tsm)
+```
+
+Un plot de los datos a traves de los años
+```{r maptsm}
+spplot(sstm, 
+       colorkey = list(space = "bottom"), 
+       scales = list(draw = TRUE),
+      main = "TSM",
+      fill='white')
+```
+
+Ahora ploteo los datos del `2000`
+```{r plottsm1, eval=FALSE}
+ggplot() +
+  geom_raster(data = stack_zona_tsm, 
+              aes(x = lon, y = lat, fill = stack_zona_tsm$`2000`))+
+  theme_bw()+
+  scale_fill_fermenter( palette = "Oranges",
+                        n.breaks = 7,
+                        name="TSM 2000")+
+  ylim(-75,-51)+
+  xlim(-100, -30)
+```
+
+
+```{r otro plot}
+plot(sstm, col = colorRampPalette(c("blue", "green", "yellow", "red"))(10), main = "Mapa de la variable de interés", ylim=c(-70,-50))
+```
+Ahora debo manipuñar la data para dejar formato largo table y luego extraer la serie de tiempo.
+
+
+```{r manidat3}
+# Primero cambio nombre de las columnas
+colnames(stack_zona_tsm) <- c("lon", "lat",
+                              "1991","1992", "1993", "1994",
+                     "1995","1996", "1997", "1998", 
+                      "1999",  "2000", "2001",  "2002",  "2003", 
+                      "2004", "2005", "2006", "2007", "2008", "2009",
+                      "2010","2011", "2012", "2013", "2014", "2015", 
+                      "2016", "2017" , "2018",  "2019", "2020",
+                     "2021", "2022")
+# ahora pivoteo los datos a lo largo
+dattsm <- stack_zona_tsm %>%
+  pivot_longer(cols = c("1991","1992", "1993", "1994",
+                     "1995","1996", "1997", "1998", 
+                      "1999",  "2000",  "2001",  "2002",  "2003", 
+                      "2004", "2005", "2006", "2007", "2008", "2009",
+                      "2010","2011", "2012", "2013", "2014", "2015", 
+                      "2016", "2017" , "2018",  "2019", "2020",
+                     "2021", "2022"), 
+               names_to = "ANO", values_to = "TSM")
+```
+
+Compruebo la tendencia general de los datos a traves de la media TSM
+
+Distribución de la variable en frecuencia y tiempo
+
+```{r manidat4}
+
+tsmh <- ggplot() +
+  geom_histogram(data = dattsm, 
+                 aes(TSM),
+                 bins= 100)+
+  theme_bw()
+
+datsm1=dattsm %>% 
+               group_by(ANO) %>% 
+               summarize(mean_var=mean(TSM))
+
+# un grafico simple
+aschl <- ggplot(datsm1,aes(y=mean_var, 
+                           x=as.double(ANO))) +
+  geom_point(color="2")+
+  stat_smooth(method = "loess", col=2)+
+  theme_light()+
+  xlab("")
+tsmh |aschl
+```
+# AGRUPACION DE VARIABLES EN EL ESPACIO
+
+En este paso identificamos los distintos niveles de agregacion espacial en klos cuales se realizará el analisis de las tendencias de las variabless ambientales (Chla, Sea Ice cover y TSM). En este caso usaremos grillas de 1x1 grados, las áreas de manejo espacial de CCAMLR y el bolque 48.1.
+ Primero identifico todos los objetos `RasterStack` definidos previamente.
+ 
+ SIC  = `ich` Datos de Hielo de archivos `.nc`
+ SIC =`raster_stack` Datos dde hielo de archivos `.tif` (1979-2022)
+ Chla = `chla`  datos de clorofila en archivo `.nc`
+ TSM =  `sstm` Datos de TSM en archivo unico `.nc`desde el año 1991 al 2022
+ 
+## SSMU CCAMLR
+
+Identificar tendencias temporales por cada SSSMU para tener un mejor detalle del comportamiento de la variable a traves del tiempo en el espacio definido.
+
+Defino las subareas a trabajar con la librería `CCAMLRGIS`
+
+```{r ssmu}
+# con SSMU
+ssmu <- load_SSMUs()
+ssmu481 <- subset(ssmu[(2:7),])
+ssmu481a <- st_as_sf(ssmu481) 
+ssmu481aa = st_transform(ssmu481a, "+proj=latlong +ellps=WGS84")
+
+# con Statistical Areas
+suba <- load_ASDs()
+suba1 <- subset(suba[(3),])
+suba1a<- st_as_sf(suba1) 
+suba1aa = st_transform(suba1a, "+proj=latlong +ellps=WGS84")
+
+
+# Cargo linea de costa
+coast <- load_Coastline()
+coast1<- st_as_sf(coast) 
+coast2 = st_transform(coast1, "+proj=latlong +ellps=WGS84")
+
+# y testeo el mapa
+
+ssmap <- ggplot(ssmu481aa)+
+  geom_sf(data = coast2, colour="black", fill=NA)+
+  geom_sf(data= suba1aa, fill=NA)+
+  geom_sf(aes(fill=ssmu481aa$GAR_Short_Label))+
+  scale_fill_viridis_d(option = "E")+
+  geom_sf_label(aes(label = ssmu481aa$GAR_Short_Label))+
+  labs(fill = "SSMU")+
+  ylim(-70, -60)+
+  xlim(-70, -50)+
+  theme_bw()
+ssmap
+
+
+```
+De forma experimental hago una grilla sobre las SSMU.
+
+```{r ssmu1}
+Grid<- ssmu481aa %>% #pm481 es el plot base original linea 481
+  sf::st_make_grid(cellsize = c(0.5,0.25)) %>% # para que quede cuadrada
+  sf::st_cast("MULTIPOLYGON") %>%
+  sf::st_sf()  %>%  # objeto en spatial feature
+  dplyr::mutate(cellid = row_number()) 
+
+# Corto la grilla dentro de las SSMU
+gridcrop <- crop_shape(Grid, ssmu481aa, polygon = TRUE)
+
+# Pruebo el mapa
+ggplot() +
+  geom_sf(data = gridcrop, 
+          color="grey",  
+          fill=NA, 
+          size=0.3) +
+  geom_sf(data = ssmu481aa, fill = NA)+
+  geom_sf(data= suba1aa, fill=NA)+
+  geom_sf(data = coast2, colour="black", fill=NA)+
+  theme_bw()+
+  ylim(-70, -60)+
+  xlim(-70, -50)
+```
+
+### SIC 
+
+Extraigo los datos previamente trabajados del objeto `raster_stack`
+
+```{r ssmu34}
+extich<-raster::extract(raster_stack, ssmu481aa, 
+                         method="bilinear", 
+                         weights=FALSE,
+                         buffer=NULL, 
+                         small=FALSE, 
+                         cellnumbers=FALSE,
+                         fun=mean, 
+                         na.rm=TRUE, 
+                         df=TRUE, 
+                         factors=FALSE,
+                         sp=TRUE)
+```
+
+Ahora lo ordeno como `data.frame`
+
+```{r ssmu dat}
+coords<-as.data.frame(coordinates(extich))
+
+daich<-data.frame(coords,extich)
+# Primero cambio nombre de las columnas
+daich1 <- daich %>% 
+  select(1, 2, 5, 18:60)
+
+colnames(daich1) <- c("LON", "LAT", "SSMU",
+                      "1979","1980", "1981", "1982", 
+                      "1983","1984", "1985", "1986",
+                      "1987","1989", "1990", "1991",
+                      "1992", "1993", "1994",
+                     "1995","1996", "1997", "1998",
+                      "1999",  "2000",  "2001",  "2002",  "2003", 
+                      "2004", "2005", "2006", "2007", "2008", "2009",
+                      "2010","2011", "2012", "2013", "2014", "2015", 
+                      "2016", "2017" , "2018",  "2019",
+                     "2020", "2021", "2022")
+# ahora pivoteo los datos a lo largo
+daich2 <- daich1 %>%
+  pivot_longer(cols = c("1979","1980", "1981", "1982", 
+                      "1983","1984", "1985", "1986",
+                      "1987","1989", "1990", "1991",
+                      "1992", "1993", "1994",
+                     "1995","1996", "1997", "1998",
+                      "1999",  "2000",  "2001",  "2002",  "2003", 
+                      "2004", "2005", "2006", "2007", "2008", "2009",
+                      "2010","2011", "2012", "2013", "2014", "2015", 
+                      "2016", "2017" , "2018",  "2019",
+                     "2020", "2021", "2022"), 
+               names_to = "ANO", values_to = "SIC")
+
+
+```
+
+Plot simples de la variable SIC en la zona de estudio
+
+```{r hsic}
+hissic <- ggplot() +
+  geom_histogram(data = daich2, aes(SIC, fill=SSMU))+
+  facet_wrap(~SSMU)+
+  scale_fill_bluebrown_d()+
+  theme_bw()
+hissic
+
+
+```
+Grafico de la variable en el tiempo por cada SSMU
+
+```{r tsic}
+as <- ggplot(daich2,
+             aes(y=SIC, x=as.double(ANO))) +
+  geom_point()+
+  stat_smooth(method = "loess")+
+  facet_wrap(~SSMU, scales="free_y")+
+  theme_bw()+
+  xlab("")+
+  ylab("Sea Ice Concentration Mean")
+as
+```
+Ahora un grafico por todas las SSMU
+
+```{r tsic1}
+astot <- ggplot(daich2 %>% 
+                  group_by(ANO) %>% 
+                  summarize(meani=mean(SIC)),
+             aes(y=meani, x=as.double(ANO))) +
+  geom_point()+
+  stat_smooth(method = "loess")+
+  theme_bw()+
+  xlab("")+
+  ylab("Sea Ice Concentration Mean")
+astot
+```
+### CHL a
+
+
+Extraigo los datos previamente trabajados del objeto `chla`
+
+```{r chla}
+extchl<-raster::extract(chla, ssmu481aa, 
+                         method="bilinear", 
+                         weights=FALSE,
+                         buffer=NULL, 
+                         small=FALSE, 
+                         cellnumbers=FALSE,
+                         fun=mean, 
+                         na.rm=TRUE, 
+                         df=TRUE, 
+                         factors=FALSE,
+                         sp=TRUE)
+```
+
+Ahora lo ordeno como `data.frame`
+
+```{r ssmuchl}
+coordschl<-as.data.frame(coordinates(extchl))
+
+dachl<-data.frame(coordschl,extchl)
+# Primero cambio nombre de las columnas
+dachl1 <- dachl %>% 
+  select(1, 2, 5, 18:38)
+
+colnames(dachl1) <- c("LON", "LAT", "SSMU",
+                      "2000",  "2001",  "2002",  "2003", 
+                      "2004", "2005", "2006", "2007", "2008", "2009",
+                      "2010","2011", "2012", "2013", "2014", "2015", 
+                      "2016", "2017" , "2018",  "2019",
+                     "2020")
+# ahora pivoteo los datos a lo largo
+dachl2 <- dachl1 %>%
+  pivot_longer(cols = c("2000",  "2001",  "2002",  "2003", 
+                      "2004", "2005", "2006", "2007", "2008", "2009",
+                      "2010","2011", "2012", "2013", "2014", "2015", 
+                      "2016", "2017" , "2018",  "2019",
+                     "2020"), 
+               names_to = "ANO", values_to = "CHL")
+
+
+```
+
+Plot del comportaniento de la variable por SSMU
+
+```{r ssmuchl2}
+hischl <- ggplot() +
+  geom_histogram(data = dachl2, aes(CHL, fill=SSMU))+
+  facet_wrap(~SSMU)+
+  scale_fill_bluebrown_d()+
+  theme_bw()
+hischl
+```
+Tendencia temporal de la variable por SSMU
+
+```{r chltem}
+
+aschl <- ggplot(dachl2,
+             aes(y=CHL, x=as.double(ANO))) +
+  geom_point(col="#386641")+
+  geom_line(col="#386641")+
+  stat_smooth(method = "loess", col="#80ed99")+
+  facet_wrap(~SSMU, scales="free_y")+
+  theme_bw()+
+  xlab("")+
+  ylab("Chl a Concentration")
+aschl
+```
+Ahora un grafico por todas las SSSMU
+
+```{r chltemssmu}
+chtot <- ggplot(dachl2 %>% 
+                  group_by(ANO) %>% 
+                  summarize(meani=mean(CHL)),
+             aes(y=meani, x=as.double(ANO))) +
+  geom_point(col="#386641")+
+  stat_smooth(method = "loess", col="#80ed99")+
+  theme_bw()+
+  xlab("")+
+  ylab("Chl a Concentration")
+chtot
+```
+
+Una estadistica del data frame
+```{r estds}
+skimr::skim(dachl2)
+```
+### TSM
+
+Extraigo los datos previamente trabajados del objeto `sstm`
+
+```{r ssmutsm}
+extsm<-raster::extract(sstm, ssmu481aa, 
+                         method="bilinear", 
+                         weights=FALSE,
+                         buffer=NULL, 
+                         small=FALSE, 
+                         cellnumbers=FALSE,
+                         fun=mean, 
+                         na.rm=TRUE, 
+                         df=TRUE, 
+                         factors=FALSE,
+                         sp=TRUE)
+```
+
+Ahora lo ordeno como `data.frame`
+
+```{r tsm2}
+coords<-as.data.frame(coordinates(extsm))
+
+datsm<-data.frame(coords,extsm)
+# Primero cambio nombre de las columnas
+datsm1 <- datsm %>% 
+  select(1, 2, 5, 18:49)
+
+colnames(datsm1) <- c("LON", "LAT", "SSMU",
+                      "1991","1992", "1993", "1994",
+                     "1995","1996", "1997", "1998",
+                      "1999",  "2000",  "2001",  "2002",  "2003", 
+                      "2004", "2005", "2006", "2007", "2008", "2009",
+                      "2010","2011", "2012", "2013", "2014", "2015", 
+                      "2016", "2017" , "2018",  "2019",
+                     "2020", "2021", "2022")
+# ahora pivoteo los datos a lo largo
+datsm2 <- datsm1 %>%
+  pivot_longer(cols = c("1991",
+                      "1992", "1993", "1994",
+                     "1995","1996", "1997", "1998",
+                      "1999",  "2000",  "2001",  "2002",  "2003", 
+                      "2004", "2005", "2006", "2007", "2008", "2009",
+                      "2010","2011", "2012", "2013", "2014", "2015", 
+                      "2016", "2017" , "2018",  "2019",
+                     "2020", "2021", "2022"), 
+               names_to = "ANO", values_to = "TSM")
+
+
+```
+
+Plot simples de TSM
+
+```{r plottsm2}
+histsm <- ggplot() +
+  geom_histogram(data = datsm2, aes(TSM, fill=SSMU))+
+  facet_wrap(~SSMU)+
+  scale_fill_viridis_d(option="A")+
+  theme_bw()
+histsm
+```
+
+Tendencia temporal del TSM por SSMU
+```{r plottsm3}
+
+atsm <- ggplot(datsm2,
+             aes(y=TSM, x=as.double(ANO))) +
+  geom_point(col="#ffb3c1")+
+  stat_smooth(method = "loess", col="#a4133c")+
+  facet_wrap(~SSMU, scales="free_y")+
+  theme_bw()+
+  xlab("")+
+  ylab("TSM Mean")
+atsm
+```
+Ahora un grafico por todas las SSSMU
+
+```{r plottsm4}
+tstot <- ggplot(datsm2 %>% 
+                  group_by(ANO) %>% 
+                  summarize(meani=mean(TSM)),
+             aes(y=meani, x=as.double(ANO))) +
+  geom_point(col="#ffb3c1")+
+  stat_smooth(method = "loess", col="#a4133c")+
+  theme_bw()+
+  xlab("")+
+  ylab("TSM")
+tstot
+```
+
+
+## GRILLA REGULAR 0.5 x 0.5
+
+### SIC
+
+De forma experimental hago una grilla sobre la 48.1
+
+```{r gsic, eval=FALSE}
+gsic <- st_as_sf(datgeo5, coords = c("long", "lat"),  
+                  crs = "+proj=latlong +ellps=WGS84") 
+
+Grid2<- suba1aa %>% #pm481 es el plot base original linea 481
+  sf::st_make_grid(cellsize = c(0.6,0.3)) %>% # para que quede cuadrada
+  sf::st_cast("MULTIPOLYGON") %>%
+  sf::st_sf()  %>%  # objeto en spatial feature
+  dplyr::mutate(cellid = row_number()) 
+
+# Corto la grilla dentro de las SSMU
+gridcrop1 <- crop_shape(Grid2, suba1aa, polygon = TRUE)
+#
+resulsic <- Grid2 %>%
+  st_join(gsic) %>% 
+  group_by(cellid)
+```
+Mapas
+
+```{r mapas anuales SIC, eval=FALSE}
+
+# Pruebo el mapa
+machl <- ggplot() +
+  geom_sf(data=resultsic %>% 
+            drop_na(),  aes(fill = SEAICE), 
+          alpha=0.7, color=NA) +
+  scale_fill_see_c(palette = "light")+
+  geom_sf(data = gridcrop1, 
+          color=NA,  
+          fill=NA) +
+  geom_sf(data = ssmu481aa, fill = NA)+
+  geom_sf(data= coast1, fill="#f9dcc4")+
+  geom_sf(data= suba1aa, fill=NA)+
+  xlab(expression(paste(Longitude^o,~'O'))) +
+  ylab(expression(paste(Latitude^o,~'S')))+
+  theme_bw()+
+  facet_wrap(~ANO)+
+  theme(panel.background = element_rect(fill = 'aliceblue'),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())+
+  ylim(-70, -60)+
+  xlim(-70, -50)
+machl
+```
+### TSM
+
+De forma experimental hago una grilla sobre la 48.1
+
+```{r grilla ssmu}
+gtsm <- st_as_sf(dattsm , coords = c("lon", "lat"),  
+                  crs = "+proj=latlong +ellps=WGS84") 
+
+Grid2<- suba1aa %>% #pm481 es el plot base original linea 481
+  sf::st_make_grid(cellsize = c(0.6,0.3)) %>% # para que quede cuadrada
+  sf::st_cast("MULTIPOLYGON") %>%
+  sf::st_sf()  %>%  # objeto en spatial feature
+  dplyr::mutate(cellid = row_number()) 
+
+# Corto la grilla dentro de las SSMU
+gridcrop1 <- crop_shape(Grid2, suba1aa, polygon = TRUE)
+#
+result3 <- Grid2 %>%
+  st_join(gtsm) %>% 
+  group_by(cellid)
+```
+
+Mapas
+```{r mapas anuales TSM2}
+
+# Pruebo el mapa
+matsm <- ggplot() +
+  geom_sf(data=result3 %>% 
+            drop_na(),  aes(fill = TSM), 
+          alpha=0.7, color=NA) +
+  scale_fill_gradient(low = "#fff0f3",
+                      high = "#d00000")+
+  geom_sf(data = gridcrop1, 
+          color=NA,  
+          fill=NA) +
+  geom_sf(data = ssmu481aa, fill = NA)+
+  geom_sf(data= coast1, fill="#f9dcc4")+
+  xlab(expression(paste(Longitude^o,~'O'))) +
+  ylab(expression(paste(Latitude^o,~'S')))+
+  theme_bw()+
+  facet_wrap(~ANO)+
+  theme(panel.background = element_rect(fill = 'aliceblue'),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())+
+  ylim(-70, -60)+
+  xlim(-70, -50)
+matsm
+```
+
+### CHL a
+
+De forma experimental hago una grilla sobre la 48.1
+
+```{r grilla chl}
+gchl <- st_as_sf(datchl, coords = c("lon", "lat"),  
+                  crs = "+proj=latlong +ellps=WGS84") 
+
+Grid2<- suba1aa %>% #pm481 es el plot base original linea 481
+  sf::st_make_grid(cellsize = c(0.6,0.3)) %>% # para que quede cuadrada
+  sf::st_cast("MULTIPOLYGON") %>%
+  sf::st_sf()  %>%  # objeto en spatial feature
+  dplyr::mutate(cellid = row_number()) 
+
+# Corto la grilla dentro de las SSMU
+gridcrop1 <- crop_shape(Grid2, suba1aa, polygon = TRUE)
+#
+resultchl <- Grid2 %>%
+  st_join(gchl) %>% 
+  group_by(cellid)
+```
+
+Mapas
+
+```{r mapas anuales Chla}
+
+# Pruebo el mapa
+machl <- ggplot() +
+  geom_sf(data=resultchl %>% 
+            drop_na(),  aes(fill = CHLa), 
+          alpha=0.7, color=NA) +
+  scale_fill_distiller(palette = 5,
+                       n.breaks = 5,
+                       direction = -1)+
+  geom_sf(data = gridcrop1, 
+          color=NA,  
+          fill=NA) +
+  geom_sf(data = ssmu481aa, col="red", fill = NA)+
+  geom_sf(data= coast1, fill="#f9dcc4")+
+  geom_sf(data= suba1aa, fill=NA)+
+  xlab(expression(paste(Longitude^o,~'O'))) +
+  ylab(expression(paste(Latitude^o,~'S')))+
+  theme_bw()+
+  facet_wrap(~ANO)+
+  theme(panel.background = element_rect(fill = 'aliceblue'),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank())+
+  ylim(-70, -60)+
+  xlim(-70, -50)
+machl
+```
+
+
+# PREPARA BASE
+
+Ahora se deben preparar las vbase de trabajo definitivas de las tres variables ambientales en cuestión; TSM, Concentración de Hielo y Chl-a
+
+# REFERENCIAS
+
+Hersbach, H., Bell, B., Berrisford, P., Biavati, G., Horányi, A., Muñoz Sabater, J., Nicolas, J., Peubey, C., Radu, R., Rozum, I., Schepers, D., Simmons, A., Soci, C., Dee, D., Thépaut, J-N. (2019): ERA5 monthly averaged data on single levels from 1959 to present. Copernicus Climate Change Service (C3S) Climate Data Store (CDS). (Accessed on < DD-MMM-YYYY >), 10.24381/cds.f17050d7
